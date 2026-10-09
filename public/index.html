@@ -3,257 +3,171 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>memecoin-early-entry(20) — dead-signals</title>
-<meta name="description" content="20 memecoin trading strategies tested against 43.6M on-chain trades. All 20 died under audit. Forensic report.">
+<title>dead-signals — autopsy 001</title>
+<meta name="description" content="20 memecoin trading strategies tested against 43.6M on-chain trades. All 20 died under audit.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --paper:#fbfbf8; --ink:#16150f; --mute:#57544a; --faint:#8b8778;
-  --rule:#dcd9cc; --dead:#b3261e; --live:#33623f;
-  --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
-  --serif:'IBM Plex Serif',Georgia,serif;
+  --bg:#0e110d; --panel:#131711; --ink:#c9c6b6; --dim:#6f6c5c; --faint:#49473d;
+  --dead:#e0533d; --live:#7fb069; --amber:#c9a227; --rule:#2a2e24;
 }
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--paper);color:var(--ink);font-family:var(--serif);
-  font-size:17px;line-height:1.65;-webkit-font-smoothing:antialiased}
-.wrap{max-width:720px;margin:0 auto;padding:0 24px}
-.mono{font-family:var(--mono)}
-.cite{font-family:var(--mono);font-size:11px;color:var(--faint);
-  white-space:nowrap;vertical-align:super}
-.cite::before{content:"["}.cite::after{content:"]"}
+body{background:var(--bg);color:var(--ink);
+  font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;
+  font-size:14px;line-height:1.7;-webkit-font-smoothing:antialiased}
+::selection{background:#2e3527}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
 
-/* ── man-page header ─────────────────────── */
-.man{font-family:var(--mono);font-size:12.5px;line-height:1.9;
-  border-bottom:1px solid var(--ink);padding:20px 0 16px;
-  display:flex;justify-content:space-between;letter-spacing:.06em}
-.man .c{color:var(--faint)}
+.dim{color:var(--dim)} .faint{color:var(--faint)}
+.dead{color:var(--dead)} .live{color:var(--live)} .amber{color:var(--amber)}
+pre{font-family:inherit;font-size:inherit;line-height:inherit;
+  white-space:pre;overflow-x:auto}
+p{margin:0 0 18px;max-width:66ch}
+p.prose{color:#a8a595}
+b,strong{font-weight:700;color:var(--ink)}
 
-/* ── doc sections ────────────────────────── */
-section{margin:0}
-.sechead{display:flex;align-items:baseline;gap:14px;margin:44px 0 18px}
-.sechead .num{font-family:var(--mono);font-size:12px;color:var(--dead);
-  letter-spacing:.15em;flex-shrink:0}
-.sechead h2{font-family:var(--mono);font-size:14px;font-weight:600;
-  letter-spacing:.22em;text-transform:uppercase}
-.sechead::after{content:"";flex:1;border-bottom:1px solid var(--rule);
-  transform:translateY(-4px)}
+/* ── session header ─────────────────────── */
+.session{padding:26px 0 0}
+.session pre{color:var(--dim)}
+.cursor{display:inline-block;width:8px;height:15px;background:var(--live);
+  vertical-align:-2px;animation:blink 1.1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
 
-.name-block{margin:40px 0 8px}
-.name-block .cmd{font-family:var(--mono);font-size:15px;font-weight:600;margin-bottom:8px}
-.name-block .cmd .dash{color:var(--mute);font-weight:400}
-.syn{font-family:var(--mono);font-size:13px;color:var(--mute);
-  border-left:2px solid var(--ink);padding:4px 0 4px 16px;margin:26px 0;line-height:2}
+/* ── data blocks ────────────────────────── */
+.block{border:1px solid var(--rule);background:var(--panel);
+  padding:18px 20px;margin:0 0 30px}
+.block pre{font-size:13px}
 
-p{margin:0 0 20px}
-h1{font-family:var(--serif);font-size:40px;font-weight:600;line-height:1.14;
-  letter-spacing:-.01em;margin:34px 0 18px}
-.sub{font-size:19px;color:var(--mute);font-style:italic;line-height:1.55;margin-bottom:8px}
-.neg{color:var(--dead);font-family:var(--mono);font-size:.92em}
-.pos{color:var(--ink);font-family:var(--mono);font-size:.92em}
+/* ── section separators ─────────────────── */
+.sep{margin:38px 0 22px;color:var(--faint);font-size:12.5px;overflow:hidden;white-space:nowrap}
+.sep b{color:var(--ink);font-weight:500}
 
-/* ── exhibits ────────────────────────────── */
-.exhibit{margin:34px 0;border-top:2px solid var(--ink);padding-top:8px}
-.exhibit .exlabel{font-family:var(--mono);font-size:11px;letter-spacing:.2em;
-  text-transform:uppercase;color:var(--ink);margin-bottom:2px}
-.exhibit .exsrc{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-bottom:14px}
-.exhibit svg{display:block;width:100%;height:auto}
-.exhibit .exnote{font-size:14px;color:var(--mute);margin-top:12px;line-height:1.55}
+/* ── prose headers ──────────────────────── */
+h1{font-size:26px;font-weight:700;line-height:1.3;margin:26px 0 14px;color:var(--ink)}
+h1 .q{color:var(--dead)}
+.tag{color:var(--dim);font-size:13px;margin-bottom:26px}
 
-/* ── audit findings ──────────────────────── */
-.finding{margin:26px 0;padding-left:20px;border-left:2px solid var(--dead)}
-.finding .fhead{font-family:var(--mono);font-size:12px;letter-spacing:.15em;
-  text-transform:uppercase;margin-bottom:8px}
-.finding .fhead .fid{color:var(--dead);margin-right:8px}
-.finding p{font-size:16px;margin:0 0 10px}
-.finding .verdict{font-family:var(--mono);font-size:12px;color:var(--dead)}
-
-.exception{border:1px solid var(--live);padding:20px 22px;margin:30px 0}
-.exception .fhead{font-family:var(--mono);font-size:12px;letter-spacing:.15em;
-  text-transform:uppercase;color:var(--live);margin-bottom:8px}
-.exception p{font-size:16px;margin:0}
-
-/* ── verdict box ─────────────────────────── */
-.verdictbox{margin:40px 0;border:2px solid var(--ink);padding:22px 24px}
-.verdictbox .vlabel{font-family:var(--mono);font-size:12px;letter-spacing:.25em;
-  text-transform:uppercase;margin-bottom:10px}
-.verdictbox .v{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--dead)}
-.verdictbox p{font-size:15px;color:var(--mute);margin:10px 0 0}
-
-/* ── colophon ────────────────────────────── */
-.colophon{border-top:1px solid var(--ink);margin-top:56px;padding:20px 0 70px;
-  font-family:var(--mono);font-size:11.5px;color:var(--mute);line-height:2}
-.colophon b{color:var(--ink);font-weight:600}
-
-@media(max-width:640px){
-  h1{font-size:30px}
-  .man{font-size:10.5px}
-}
+/* ── misc ───────────────────────────────── */
+.hr{border:0;border-top:1px solid var(--rule);margin:34px 0}
+a{color:var(--live);text-decoration:none;border-bottom:1px solid #2c3a28}
+a:hover{color:#9cd184}
+@media(max-width:640px){body{font-size:13px}}
 </style>
 </head>
 <body>
 <div class="wrap">
 
-<header class="man">
-  <span>STRATEGIES(20)</span>
-  <span class="c">dead-signals — evidence ledger</span>
-  <span>STRATEGIES(20)</span>
-</header>
+<div class="session"><pre>
+<span class="faint">┌─</span> dead-signals v0.1.4 <span class="faint">──────────────────────────────────────────────</span>
+<span class="faint">│</span> <span class="dim">evidence ledger · entry 001 · 2026-10-09</span>
+<span class="faint">└───────────────────────────────────────────────────────────────────</span>
 
-<div class="name-block">
-  <div class="cmd">memecoin-early-entry <span class="dash">— buy 1–6h after launch, sell at 5–30×</span></div>
-</div>
+<span class="live">$</span> autopsy run --target <span class="amber">"solana-memecoin-early-entry"</span> --strict
+</pre></div>
 
-<div class="syn">1,194,068 launches tracked · 43.6M trades (100% tx-signed) · 20 hypotheses · 4 audits · 0 survivors</div>
+<h1>Every strategy we tested<br>was already dead<span class="q">.</span></h1>
+<p class="tag">20 variants of the "buy a fresh memecoin, sell at 5–30×" playbook, run against the real trade tape.</p>
 
-<h1>Every strategy we tested was already dead.</h1>
-<p class="sub">The folklore says: catch a fresh Solana memecoin early, ride it, exit before the music stops. We built the dataset, ran twenty variants of that playbook, and audited the results until nothing was left standing.</p>
+<div class="block"><pre>
+<span class="dim">corpus:</span>
+  launches tracked ......... <b>1,194,068</b>
+  coins harvested .......... <b>5,654</b>
+  trades (tx-signed) ....... <b>43,600,000</b>
+  candles (1s) ............. <b>15,600,000</b>
+  labels ................... <b>741 winners / 17,397 controls</b>
+  api calls spent .......... <b>4,871,466</b>
+<span class="live">[ ok ] corpus loaded</span>
+</pre></div>
 
-<section>
-  <div class="sechead"><span class="num">§01</span><h2>Data</h2></div>
-  <p>The corpus: 5,654 coins, 43.6M trades with transaction signatures on every row, 15.6M one-second candles, 741 labeled winners against 17,397 controls.<span class="cite">DET/CORPUS.md:7</span> Building it took 4,871,466 recorded API calls. The universe is 1,194,068 launches — this is the tape, not a sample of winners.</p>
-</section>
+<div class="sep">──<b> run · 20 hypotheses </b>──────────────────────────────────────────</div>
 
-<section>
-  <div class="sechead"><span class="num">§02</span><h2>The mirage</h2></div>
-  <p>Before auditing, the raw numbers looked incredible. H18 (whale/caller entry) showed <span class="pos">+352.4 SOL</span> on ten trades. H17 (multi-feature) showed <span class="pos">+50.2 SOL</span> on forty-two.<span class="cite">DET/GRAVEYARD.md:6-8</span> Stop here and you have a strategy and a Twitter thread. We kept going.</p>
+<div class="block"><pre>
+  <span class="dim">id    axis                       fires    verdict</span>
+  <span class="faint">  ──    ────────────────────────   ─────    ──────────────────────────</span>
+  H01   sustained volume velocity    139    <span class="amber">WEAK</span>  96% EV in top-5% trades
+  H02   dev holds                     44    <span class="amber">WEAK</span>  dev-conc 64%
+  H04   top-10 concentration           5    <span class="dead">FATAL</span> n=5, tail-only
+  H05   social/caller                 19    <span class="amber">WEAK</span>  93% EV in one week
+  H06   funder clusters              119    <span class="dead">DEAD</span>  WEAK-DEAD
+  H07   holder acceleration           33    <span class="amber">WEAK</span>
+  H09   —                              1    <span class="dead">DEAD</span>
+  H10   sync-buy avoidance           234    <span class="dead">DEAD</span>  volume proxy (lift 1.24)
+  H11   leaderboard presence          65    <span class="dead">DEAD</span>  PIT leak + recount
+  H12   first caller event           590    <span class="dead">DEAD</span>  mass-fire, all-tail
+  H13   social velocity                6    <span class="dead">DEAD</span>
+  H14   CMC sniper%                    0    <span class="dim">N/A</span>   data-gap (5/206)
+  H15   launchpad base-rate          139    <span class="amber">WEAK</span>  mirrors H01
+  H16   SOL regime gate              139    <span class="amber">WEAK</span>  same signal set
+  H17   multi-feature                 42    <span class="dead">DEAD</span>  85% P&amp;L one dev wallet
+  H18   whale/caller entry            10    <span class="dead">DEAD</span>  recount −43%
+  H19   —                             17    <span class="dead">DEAD</span>
+  H20   misc axis                     27    <span class="amber">WEAK</span>  97% P&amp;L one dev
+                                       ──────────────────────────────
+                                       <span class="dead">0 / 20 strategies survive</span>
+</pre></div>
 
-  <div class="exhibit">
-    <div class="exlabel">Exhibit A</div>
-    <div class="exsrc">simulated EV, SOL — naive result vs post-audit · DET/GRAVEYARD.md</div>
-    <svg viewBox="0 0 720 210" role="img" aria-label="EV before and after audit">
-      <!-- scale: 1 SOL = 0.34px, baseline y=170 -->
-      <g stroke="#dcd9cc" stroke-width="1">
-        <line x1="60" y1="136" x2="700" y2="136"/>
-        <line x1="60" y1="102" x2="700" y2="102"/>
-        <line x1="60" y1="68"  x2="700" y2="68"/>
-        <line x1="60" y1="34"  x2="700" y2="34"/>
-      </g>
-      <g font-family="var(--mono)" font-size="10" fill="#8b8778" text-anchor="end">
-        <text x="54" y="140">100</text><text x="54" y="106">200</text>
-        <text x="54" y="72">300</text><text x="54" y="38">350</text>
-      </g>
-      <line x1="60" y1="170" x2="700" y2="170" stroke="#16150f" stroke-width="1.5"/>
+<p class="prose">The naive results looked incredible — which is exactly the trap. A whale-entry variant showed <b>+352.4 SOL</b> on ten trades. A leaderboard feature showed <b>+73.2 SOL</b>. Stop there and you have a strategy and a Twitter thread. Instead we ran four audits.</p>
 
-      <!-- H18: +352.4 → +200.8 -->
-      <rect x="100" y="50"   width="30" height="120" fill="#16150f"/>
-      <rect x="134" y="101.7" width="30" height="68.3" fill="#b3261e"/>
-      <text x="100" y="44"   font-family="var(--mono)" font-size="11" fill="#16150f">+352.4</text>
-      <text x="134" y="95"   font-family="var(--mono)" font-size="11" fill="#b3261e">+200.8</text>
-      <text x="112" y="188"  font-family="var(--mono)" font-size="11" fill="#16150f">H18</text>
-      <text x="98"  y="202"  font-family="var(--mono)" font-size="9.5" fill="#8b8778">−43% recount</text>
+<div class="sep">──<b> audit Q1 · independent recount </b>───────────────────────────────</div>
+<p class="prose">Fresh code re-derived every result from raw files — no shared functions, no shared assumptions. Sampled exit prices matched the real tape 10/10. The numbers didn't survive: n=10 is an anecdote, and in one group a single trade carried 42% of the entire EV.</p>
 
-      <!-- H11: +73.2 → +0.19 -->
-      <rect x="280" y="145.1" width="30" height="24.9" fill="#16150f"/>
-      <rect x="314" y="169.9" width="30" height="0.7"  fill="#b3261e"/>
-      <text x="280" y="139"   font-family="var(--mono)" font-size="11" fill="#16150f">+73.2</text>
-      <text x="314" y="160"   font-family="var(--mono)" font-size="11" fill="#b3261e">+0.19</text>
-      <text x="292" y="188"   font-family="var(--mono)" font-size="11" fill="#16150f">H11</text>
-      <text x="272" y="202"   font-family="var(--mono)" font-size="9.5" fill="#8b8778">−99.7% PIT</text>
+<div class="sep">──<b> audit Q2 · point-in-time </b>────────────────────────────────────</div>
+<p class="prose">For every feature: was it <b>knowable at decision time?</b> The leaderboards table stores fetch-time state — <span class="amber">snapshot_date</span> is NULL on every row. "Was this wallet a leaderboard wallet when it bought" silently became "is it one now". The alpha was the future leaking backward.</p>
 
-      <!-- H17: +50.2 → borderline -->
-      <rect x="460" y="152.9" width="30" height="17.1" fill="#16150f"/>
-      <rect x="494" y="169"   width="30" height="1.2"  fill="#b3261e"/>
-      <text x="460" y="147"   font-family="var(--mono)" font-size="11" fill="#16150f">+50.2</text>
-      <text x="494" y="162"   font-family="var(--mono)" font-size="11" fill="#b3261e">≈0</text>
-      <text x="472" y="188"   font-family="var(--mono)" font-size="11" fill="#16150f">H17</text>
-      <text x="450" y="202"   font-family="var(--mono)" font-size="9.5" fill="#8b8778">dev-concentrated</text>
+<div class="sep">──<b> audit Q3 · selection </b>────────────────────────────────────────</div>
+<p class="prose">Surviving signals fired almost only in the top volume quintile — where the base win rate is already 23.7% vs 6.0% overall. Volume-matched controls collapsed the lift to ~1.24×. Two dev wallets accounted for ~12,500 SOL of aggregate P&amp;L. A "population pattern" made of two actors.</p>
 
-      <!-- legend -->
-      <rect x="580" y="24" width="9" height="9" fill="#16150f"/>
-      <text x="596" y="32" font-family="var(--mono)" font-size="10.5" fill="#57544a">naive</text>
-      <rect x="580" y="40" width="9" height="9" fill="#b3261e"/>
-      <text x="596" y="48" font-family="var(--mono)" font-size="10.5" fill="#57544a">after audit</text>
-    </svg>
-    <div class="exnote">Three headline results before and after the audits. What looked like an edge was measurement error, lookahead, and concentration.</div>
-  </div>
-</section>
+<div class="sep">──<b> audit Q4 · execution </b>────────────────────────────────────────</div>
+<p class="prose">Exits assumed zero price impact — infinite liquidity, the oldest lie in backtesting. Fixed with constant-product math + a 2% sandwich tax. The audit also caught a bare <span class="dead">except</span> swallowing a NameError on every time-stop exit: <b>539 of 1,618 simulated trades had silently vanished</b> — selectively deleting exactly the ugly exits that drag EV down.</p>
 
-<section>
-  <div class="sechead"><span class="num">§03</span><h2>Four audits, four deaths</h2></div>
+<div class="block"><pre>
+<span class="dim">exhibit A — simulated EV, naive vs post-audit (SOL)</span>
 
-  <div class="finding">
-    <div class="fhead"><span class="fid">Q1</span>Independent recount</div>
-    <p>Fresh code re-derived every result from raw files — no shared functions, no shared assumptions. Sampled exit prices matched the tape 10/10. The results didn't survive: n=10 is an anecdote, and a single trade carried 42% of one group's entire EV.<span class="cite">DET/Q1_RECOUNT.md</span></p>
-    <div class="verdict">H18: +352.4 → +200.8 SOL (−43%)</div>
-  </div>
+  H18  +352.4  <span class="faint">███████████████████████████</span><span class="dead">░░░░░░░</span>  +200.8   <span class="dead">−43.0%</span>  recount
+  H11   +73.2  <span class="faint">██████</span><span class="dead">░░░░░░░░░░░░░░░░░░░░░░░░░░░░</span>    +0.19   <span class="dead">−99.7%</span>  PIT leak
+  H17   +50.2  <span class="faint">████</span><span class="dead">░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░</span>      ≈0     <span class="dead">dead</span>   dev-conc
 
-  <div class="finding">
-    <div class="fhead"><span class="fid">Q2</span>Point-in-time audit</div>
-    <p>For every feature: was this <em>knowable</em> at decision time? The leaderboards table stores fetch-time state — <span class="mono">snapshot_date</span> is NULL on every row. "Was this a leaderboard wallet when it bought?" silently became "is it one now?" The edge was the future leaking backward.<span class="cite">DET/GRAVEYARD.md:5</span></p>
-    <div class="verdict">H11: +73.2 → +0.19 SOL (−99.7%)</div>
-  </div>
+<span class="dim">exhibit B — 1,618 simulated trades (each cell ≈ 16)</span>
 
-  <div class="finding">
-    <div class="fhead"><span class="fid">Q3</span>Selection audit</div>
-    <p>Surviving signals fired almost exclusively in the top volume quintile — where the base winner rate is already 23.7% vs 6.0% overall. Volume-matched controls collapsed the lift to ~1.24×. The signal was a volume proxy. And two dev wallets accounted for ~12,500 SOL of aggregate P&amp;L — a "population pattern" made of two actors.<span class="cite">DET/Q3_SELECTION.md</span></p>
-    <div class="verdict">H17: 85% of P&amp;L from one dev wallet</div>
-  </div>
+  <span class="faint">■■■■■■■■■■■■■■■■■■■■■■■■■</span>
+  <span class="faint">■■■■■■■■■■■■■■■■■■■■■■■■■</span>
+  <span class="faint">■■■■■■■■■■■■■■■■■■</span><span class="dead">□□□□□□□</span>
+  <span class="dead">□□□□□□□□□□□□□□□□□□□□□□□□□</span>
 
-  <div class="finding">
-    <div class="fhead"><span class="fid">Q4</span>Execution audit</div>
-    <p>Exits assumed zero price impact — infinite liquidity, the oldest lie in backtesting. Replaced with constant-product math plus a +2% sandwich tax. The audit then caught a bare <span class="mono">except</span> swallowing a NameError on every time-stop exit: <strong>539 of 1,618 simulated trades had silently vanished</strong> — selectively deleting the ugly exits that drag EV down.<span class="cite">DET/Q4_EXECUTION.md</span></p>
-    <div class="verdict">33.3% of simulated history, deleted by an empty except</div>
-  </div>
+  <span class="faint">■ recorded 1,079</span>   <span class="dead">□ deleted by bare except · 539 · 33.3%</span>
+</pre></div>
 
-  <div class="exhibit">
-    <div class="exlabel">Exhibit B</div>
-    <div class="exsrc">1,618 simulated trades — each cell ≈ 16 trades · DET/Q4_EXECUTION.md</div>
-    <svg viewBox="0 0 720 132" role="img" aria-label="539 of 1618 trades silently dropped">
-      <g id="cells"></g>
-      <g font-family="var(--mono)" font-size="10.5">
-        <rect x="0" y="104" width="9" height="9" fill="#16150f"/>
-        <text x="16" y="112" fill="#57544a">recorded (1,079)</text>
-        <rect x="140" y="104" width="9" height="9" fill="none" stroke="#b3261e" stroke-width="1" stroke-dasharray="2,2"/>
-        <text x="156" y="112" fill="#b3261e">deleted by bare except (539 · 33.3%)</text>
-      </g>
-      <script><![CDATA[
-        const g=document.getElementById('cells');
-        for(let i=0;i<100;i++){
-          const r=document.createElementNS('http://www.w3.org/2000/svg','rect');
-          const col=i%25,row=(i/25)|0;
-          r.setAttribute('x',col*28);r.setAttribute('y',row*22);
-          r.setAttribute('width',23);r.setAttribute('height',16);
-          if(i<67){r.setAttribute('fill','#16150f')}
-          else{r.setAttribute('fill','none');r.setAttribute('stroke','#b3261e');
-               r.setAttribute('stroke-width','1');r.setAttribute('stroke-dasharray','2,2')}
-          g.appendChild(r);
-        }
-      ]]></script>
-    </svg>
-    <div class="exnote">The bug didn't drop trades at random — it selected the ones that made the strategy look worse. A third of history, gone.</div>
-  </div>
-</section>
+<div class="sep">──<b> the tape is hostile anyway </b>──────────────────────────────────</div>
+<p class="prose">Over 50% of launches get sniped in block 0 (median first buy: 0 seconds). ~17% of all transactions are wash trades, and wash trading raises graduation odds up to 10× — so the label "graduated" is partly manufactured, and every feature trained on it inherits the manufacturing.</p>
 
-<section>
-  <div class="sechead"><span class="num">§04</span><h2>The tape is hostile anyway</h2></div>
-  <p>Even a real signal would face this microstructure: over 50% of launches are sniped in block 0 (median first buy: 0 seconds). ~17% of all transactions are wash trades, and wash trading raises graduation odds up to 10× — so the label "graduated" is itself partly manufactured, and every feature trained on it inherits the manufacturing.<span class="cite">DET/DETECTIVE_BIBLE.md</span></p>
-</section>
+<div class="sep">──<b> exception </b>───────────────────────────────────────────────────</div>
+<div class="block"><pre>
+<span class="live">[ survived ]</span> regime-60s scorer
+  ev/oos ......... <b>+0.087 SOL/trade</b>   n=1,192
+  win rate ....... <b>53.4%</b>
+  caveat ......... regime-dependent, thin margin, not a launch signal
+<span class="dim"># reported because "everything died" also needs an exception check</span>
+</pre></div>
 
-<section>
-  <div class="sechead"><span class="num">§05</span><h2>The exception</h2></div>
-  <div class="exception">
-    <div class="fhead">One artifact survived — modestly</div>
-    <p>A 60-second regime-gated scorer: <strong>+0.087 SOL/trade</strong> out-of-sample, n=1,192, 53.4% win rate. Regime-dependent, thin-margined, not a launch signal. Reported because "everything died" is also a claim that needs an exception check.</p>
-  </div>
-</section>
+<div class="sep">──<b> verdict </b>──────────────────────────────────────────────────────</div>
+<div class="block"><pre>
+<span class="dead">VERDICT: NO-GO · 20/20</span>
 
-<section>
-  <div class="sechead"><span class="num">§06</span><h2>Verdict</h2></div>
-  <div class="verdictbox">
-    <div class="vlabel">Verdict</div>
-    <div class="v">20 / 20 — NO-GO</div>
-    <p>What survived isn't a strategy. It's the pipeline: independent recount, point-in-time validation, volume-matched controls, execution-aware simulation. If a backtest lacks a PIT check and an independent recount, it isn't a backtest — it's a bedtime story. Write the audits first next time.</p>
-  </div>
-</section>
+  what survived is not a strategy — it's the pipeline:
+  recount → point-in-time → selection → execution.
 
-<footer class="colophon">
-  <b>COLOPHON</b><br>
-  dead-signals — a public evidence ledger. Entries are published after the thing dies, with the receipts attached.<br>
-  corpus: 43.6M trades · 5,654 coins · 741 winners / 17,397 controls · every figure cites its source file:line.<br>
-  produced with an agent swarm; all citations mechanically re-verified (182/182 checked, 0 fabricated).
-</footer>
+  if a backtest has no PIT check and no independent
+  recount, it isn't a backtest. it's a bedtime story.
+
+  next time: write the audits before the hypotheses.
+</pre></div>
+
+<div class="hr"></div>
+<pre class="dim" style="font-size:12px;padding-bottom:60px">dead-signals — published after the thing dies, receipts attached.
+figures verified against source files · 182/182 citations checked, 0 fabricated.
+<span class="live">$</span> <span class="cursor"></span></pre>
 
 </div>
 </body>
